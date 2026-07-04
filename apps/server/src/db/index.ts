@@ -1,8 +1,11 @@
 import { env } from "@Polyedro-abs/env/server";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 
-const queryClient = postgres(env.DATABASE_URL);
+const sqlitePath = env.DATABASE_URL.replace(/^file:/, "");
+const client = new Database(sqlitePath);
 
-export const db = drizzle(queryClient, { schema });
+client.pragma("journal_mode = WAL");
+
+export const db = drizzle(client, { schema });

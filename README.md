@@ -73,3 +73,36 @@ Polyedro-abs/
 - `pnpm run dev:web`: Start only the web application
 - `pnpm run dev:server`: Start only the server
 - `pnpm run check-types`: Check TypeScript types across all apps
+
+## Social post publish loop (dev)
+
+Test UI: [http://localhost:3001/dashboard/posts](http://localhost:3001/dashboard/posts)
+
+Flow: upload media → create post → publish → n8n webhook → callback → status updates in the UI.
+
+See `docs/ngrok-tunnel.md` and `docs/cloudflare-tunnel.md` for exposing the API callback URL to n8n Cloud.
+
+## Environment variables (never commit secrets)
+
+Copy the example files and paste your values locally:
+
+```bash
+cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env.local
+```
+
+| Variable | App | Description |
+|----------|-----|-------------|
+| `DATABASE_URL` | server | Local dev: `file:./dev.db`. Production: `postgresql://...` |
+| `CORS_ORIGIN` | server | Web origin, e.g. `http://localhost:3001` |
+| `N8N_WEBHOOK_URL` | server | n8n webhook trigger URL (leave empty for mock mode) |
+| `APP_PUBLIC_URL` | server | Public HTTPS URL for n8n callbacks (ngrok or production API URL) |
+| `NEXT_PUBLIC_SERVER_URL` | web | API base URL, e.g. `http://localhost:3000` |
+
+After editing env files:
+
+```bash
+pnpm install
+pnpm --filter server db:push
+pnpm dev
+```

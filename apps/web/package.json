@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@Polyedro-abs/env": "workspace:*",
+    "@Polyedro-abs/types": "workspace:*",
     "@Polyedro-abs/ui": "workspace:*",
     "@swc/helpers": "^0.5.23",
     "babel-plugin-react-compiler": "^1.0.0",
