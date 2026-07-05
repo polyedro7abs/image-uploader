@@ -44,6 +44,7 @@ export const n8nCallbackSchema = z.object({
   postId: z.uuid(),
   status: z.enum([PostStatus.PUBLISHED, PostStatus.FAILED]),
   errorMessage: z.string().optional(),
+  platformResults: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type Post = {

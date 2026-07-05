@@ -51,11 +51,13 @@ export async function finalizePost(
 }
 
 export async function triggerPublishWorkflow(post: DbPost): Promise<void> {
+  const platforms = parsePlatforms(post.platforms);
   const payload = {
     postId: post.id,
     mediaUrl: post.mediaUrl,
     caption: post.caption,
-    platforms: parsePlatforms(post.platforms),
+    platforms: platforms.map((p) => p.toLowerCase()),
+    businessId: env.FB_PAGE_ID ?? null,
     callbackUrl: `${env.APP_PUBLIC_URL ?? "http://localhost:3000"}/webhooks/n8n-callback`,
   };
 

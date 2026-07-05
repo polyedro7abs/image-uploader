@@ -150,7 +150,7 @@ webhookRoutes.post("/n8n-callback", async (c) => {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
-  const { postId, status, errorMessage } = parsed.data;
+  const { postId, status, errorMessage, platformResults } = parsed.data;
   const [existing] = await db.select().from(posts).where(eq(posts.id, postId));
 
   if (!existing) {
@@ -162,5 +162,5 @@ webhookRoutes.post("/n8n-callback", async (c) => {
   }
 
   const updated = await finalizePost(postId, status, errorMessage);
-  return c.json(updated);
+  return c.json(updated ? { ...updated, platformResults: platformResults ?? null } : { ok: true });
 });

@@ -15,6 +15,7 @@ export const env = createEnv({
     DIRECT_URL: z.url().optional(),
     N8N_WEBHOOK_URL: z.url().optional(),
     APP_PUBLIC_URL: z.url().optional(),
+    FB_PAGE_ID: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

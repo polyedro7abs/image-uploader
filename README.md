@@ -82,6 +82,8 @@ Flow: upload media → create post → publish → n8n webhook → callback → 
 
 See `docs/ngrok-tunnel.md` and `docs/cloudflare-tunnel.md` for exposing the API callback URL to n8n Cloud.
 
+See `docs/n8n-workflow.md` for the full n8n node setup (Facebook publish + callback).
+
 ## Environment variables (never commit secrets)
 
 Copy the example files and paste your values locally:
