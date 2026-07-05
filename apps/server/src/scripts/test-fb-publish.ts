@@ -6,13 +6,8 @@
  *
  * Required env: FB_PAGE_ID, FB_PAGE_ACCESS_TOKEN
  *
- * --- n8n HTTP Request node (copy after this script succeeds) ---
- * Method: POST
- * URL:    https://graph.facebook.com/v19.0/{{ $env.FB_PAGE_ID }}/photos
- * Body:   multipart/form-data
- *   - url          = https://picsum.photos/800/600  (or {{ $json.body.mediaUrl }})
- *   - caption      = Test post from Polyedro          (or {{ $json.body.caption }})
- *   - access_token = {{ $env.FB_PAGE_ACCESS_TOKEN }}
+ * This is the same Graph API call apps/server/src/lib/posts.ts makes
+ * directly for real publishes — see docs/direct-publish.md.
  *
  * curl equivalent:
  *   curl -X POST "https://graph.facebook.com/v19.0/{page-id}/photos" \

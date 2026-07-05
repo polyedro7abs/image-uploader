@@ -1,9 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { env } from "@Polyedro-abs/env/server";
-import {
-  PostStatus,
-  type Post,
-  type SocialPlatform,
-} from "@Polyedro-abs/types";
+import { PostStatus, SocialPlatform, type Post } from "@Polyedro-abs/types";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
@@ -61,34 +58,55 @@ export async function finalizePost(
   return updated ? toPost(updated) : null;
 }
 
-export async function triggerPublishWorkflow(post: DbPost): Promise<void> {
-  const platforms = parsePlatforms(post.platforms);
-  const payload = {
-    postId: post.id,
-    mediaUrl: post.mediaUrl,
-    caption: post.caption,
-    platforms: platforms.map((p) => p.toLowerCase()),
-    businessId: env.FB_PAGE_ID ?? null,
-    callbackUrl: `${env.APP_PUBLIC_URL ?? "http://localhost:3000"}/webhooks/n8n-callback`,
-  };
+const GRAPH_VERSION = "v19.0";
 
-  if (env.N8N_WEBHOOK_URL) {
-    fetch(env.N8N_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch((err) => {
-      console.error("Failed to trigger n8n webhook:", err);
-    });
-    return;
+async function publishToFacebook(post: DbPost): Promise<string> {
+  if (!env.FB_PAGE_ID || !env.FB_PAGE_ACCESS_TOKEN) {
+    throw new Error("FB_PAGE_ID or FB_PAGE_ACCESS_TOKEN is not configured");
   }
 
-  setTimeout(() => {
-    const success = Math.random() < 0.8;
-    void finalizePost(
-      post.id,
-      success ? PostStatus.PUBLISHED : PostStatus.FAILED,
-      success ? undefined : "Mock publish failed (simulated n8n error)",
-    );
-  }, 2000);
+  const url = `https://graph.facebook.com/${GRAPH_VERSION}/${env.FB_PAGE_ID}/photos`;
+  const body = new FormData();
+  body.append("url", post.mediaUrl);
+  body.append("caption", post.caption);
+  body.append("access_token", env.FB_PAGE_ACCESS_TOKEN);
+
+  const response = await fetch(url, { method: "POST", body });
+  const data = (await response.json()) as { id?: string; post_id?: string; error?: { message: string } };
+
+  if (!response.ok || data.error) {
+    throw new Error(data.error?.message ?? `Facebook API responded with ${response.status}`);
+  }
+
+  const externalId = data.post_id ?? data.id;
+  if (!externalId) {
+    throw new Error("Facebook API response did not include a post id");
+  }
+
+  return externalId;
+}
+
+async function mockPublish(platform: SocialPlatform): Promise<string> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return `mock:${platform.toLowerCase()}:${randomUUID()}`;
+}
+
+export async function triggerPublishWorkflow(post: DbPost): Promise<void> {
+  const platforms = parsePlatforms(post.platforms);
+  const platformResults: Record<string, string> = {};
+
+  try {
+    for (const platform of platforms) {
+      platformResults[platform.toLowerCase()] =
+        platform === SocialPlatform.FACEBOOK
+          ? await publishToFacebook(post)
+          : await mockPublish(platform);
+    }
+
+    await finalizePost(post.id, PostStatus.PUBLISHED, undefined, platformResults);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Publish failed";
+    console.error(`Failed to publish post ${post.id}:`, errorMessage);
+    await finalizePost(post.id, PostStatus.FAILED, errorMessage);
+  }
 }

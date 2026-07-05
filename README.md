@@ -2,7 +2,7 @@
 
 Social post automation monorepo — [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (Next.js, Hono, Turborepo, shared shadcn UI).
 
-**Branch `n8n`:** publish loop — UI → API → n8n → Facebook Page → callback → live status.
+**Branch `direct-fb-publish`:** publish loop — UI → API → Facebook Page (direct Meta Graph API call, no n8n) → live status.
 
 ## Quick start
 
@@ -23,10 +23,8 @@ pnpm dev
 | Doc | Description |
 |-----|-------------|
 | [docs/baseline-summary.md](./docs/baseline-summary.md) | Repo state **before** the publish loop |
-| [docs/publish-loop-improvements.md](./docs/publish-loop-improvements.md) | **Latest** — n8n, Meta API, infra, E2E |
-| [docs/n8n-workflow.md](./docs/n8n-workflow.md) | n8n node setup (Facebook + callback) |
-| [docs/ngrok-tunnel.md](./docs/ngrok-tunnel.md) | Expose API on 443 for n8n callbacks |
-| [docs/cloudflare-tunnel.md](./docs/cloudflare-tunnel.md) | Cloudflare tunnel (port 7844 notes) |
+| [docs/publish-loop-improvements.md](./docs/publish-loop-improvements.md) | Publish loop history, Meta API, E2E |
+| [docs/direct-publish.md](./docs/direct-publish.md) | **Latest** — direct Meta publish (no n8n), env vars |
 | [docs/database.md](./docs/database.md) | Postgres/Supabase (production path) |
 
 > **AI / full local context** (secrets by location, not in git):  
@@ -38,7 +36,7 @@ pnpm dev
 Polyedro-ads/
 ├── apps/
 │   ├── web/              Next.js :3001, dashboard/posts
-│   └── server/           Hono :3000, posts API, n8n webhook/callback
+│   └── server/           Hono :3000, posts API, direct Meta Graph API publish
 ├── packages/
 │   ├── types/            @Polyedro-abs/types (Post, Zod)
 │   ├── ui/               @Polyedro-abs/ui (shadcn)
@@ -51,10 +49,9 @@ Polyedro-ads/
 ## Features
 
 - **TypeScript** — shared types across web and server
-- **Publish loop** — upload media, create post, publish via n8n, poll status
-- **Mock mode** — leave `N8N_WEBHOOK_URL` empty for local 2s simulate
+- **Publish loop** — upload media, create post, publish directly to Meta, poll status
 - **Facebook Page publish** — verified via `pnpm --filter server test:fb-publish`
-- **Instagram** — mocked in n8n until Meta App Review
+- **Instagram** — mocked until Meta App Review
 
 ## Scripts
 
@@ -80,13 +77,9 @@ cp apps/web/.env.example apps/web/.env.local
 |----------|-----|-------------|
 | `DATABASE_URL` | server | Local: `file:./dev.db`. Prod: `postgresql://...` |
 | `CORS_ORIGIN` | server | e.g. `http://localhost:3001` |
-| `N8N_WEBHOOK_URL` | server | n8n webhook URL (`…/webhook/polyedro-publish-loop`; empty = mock mode) |
-| `APP_PUBLIC_URL` | server | Public HTTPS URL for n8n callbacks (ngrok) |
-| `FB_PAGE_ID` | server | Facebook Page ID (webhook `businessId` + FB test script) |
-| `FB_PAGE_ACCESS_TOKEN` | server | Page token for `test:fb-publish` only |
+| `FB_PAGE_ID` | server | Facebook Page ID (`GET /me/accounts` → `data[].id`) |
+| `FB_PAGE_ACCESS_TOKEN` | server | Page token from the same `/me/accounts` row — used for direct publish and `test:fb-publish` |
 | `NEXT_PUBLIC_SERVER_URL` | web | e.g. `http://localhost:3000` |
-
-Also set in **n8n Cloud Variables** panel (referenced in workflows as `$vars.KEY`): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL`.
 
 ## UI customization
 

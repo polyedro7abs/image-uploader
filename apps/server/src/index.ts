@@ -1,7 +1,7 @@
 import { env } from "@Polyedro-abs/env/server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { db } from "@/db";
-import { mediaRoutes, postsRoutes, webhookRoutes } from "@/routes/posts";
+import { mediaRoutes, postsRoutes } from "@/routes/posts";
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -31,7 +31,6 @@ app.get("/health/db", (c) => {
 
 app.route("/media", mediaRoutes);
 app.route("/posts", postsRoutes);
-app.route("/webhooks", webhookRoutes);
 
 import { serve } from "@hono/node-server";
 

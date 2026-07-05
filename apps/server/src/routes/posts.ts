@@ -1,17 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import {
-  createPostSchema,
-  n8nCallbackSchema,
-  PostStatus,
-  updatePostSchema,
-} from "@Polyedro-abs/types";
+import { createPostSchema, PostStatus, updatePostSchema } from "@Polyedro-abs/types";
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
-import { finalizePost, serializePlatforms, toPost, triggerPublishWorkflow } from "@/lib/posts";
+import { serializePlatforms, toPost, triggerPublishWorkflow } from "@/lib/posts";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
 
@@ -141,27 +136,4 @@ postsRoutes.post("/:id/publish", async (c) => {
   void triggerPublishWorkflow(updated!);
 
   return c.json(toPost(updated!));
-});
-
-export const webhookRoutes = new Hono();
-
-webhookRoutes.post("/n8n-callback", async (c) => {
-  const parsed = n8nCallbackSchema.safeParse(await c.req.json());
-  if (!parsed.success) {
-    return c.json({ error: parsed.error.flatten() }, 400);
-  }
-
-  const { postId, status, errorMessage, platformResults } = parsed.data;
-  const [existing] = await db.select().from(posts).where(eq(posts.id, postId));
-
-  if (!existing) {
-    return c.json({ error: "Post not found" }, 404);
-  }
-
-  if (existing.status !== PostStatus.PUBLISHING) {
-    return c.json({ error: "Post is not in publishing state" }, 400);
-  }
-
-  const updated = await finalizePost(postId, status, errorMessage, platformResults);
-  return c.json(updated ?? { ok: true });
 });

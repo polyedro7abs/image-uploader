@@ -1,6 +1,9 @@
-# Publish loop improvements (n8n, Meta, infra)
+# Publish loop improvements (Meta, infra)
 
-Latest work on branch **`n8n`** — social post publish loop from UI through n8n to Meta (Facebook Page) and back.
+Work carried over from branch `n8n`, with the n8n hop replaced by a direct
+Meta Graph API call — social post publish loop from UI straight to Meta
+(Facebook Page) and back. See **[direct-publish.md](./direct-publish.md)**
+for the current architecture and env vars.
 
 ## Architecture
 
@@ -8,9 +11,8 @@ Latest work on branch **`n8n`** — social post publish loop from UI through n8n
 UI (Next.js :3001)
   → API (Hono :3000)
   → SQLite (posts)
-  → n8n Cloud webhook
-       → IF facebook → Meta Graph API POST /{page-id}/photos
-       → POST /webhooks/n8n-callback (via ngrok APP_PUBLIC_URL)
+  → Facebook platform → Meta Graph API POST /{page-id}/photos (in-process)
+  → other platforms   → mocked
   → UI polls GET /posts every 3s
 ```
 
@@ -21,40 +23,13 @@ UI (Next.js :3001)
 | Shared types | `packages/types` — `PostStatus`, `SocialPlatform`, Zod schemas |
 | Posts API | `POST/GET/PATCH /posts`, `POST /posts/:id/publish` |
 | Media upload | `POST /media/upload` → `public/uploads/` |
-| n8n callback | `POST /webhooks/n8n-callback` |
-| Mock mode | Empty `N8N_WEBHOOK_URL` → 2s delay, 80/20 PUBLISHED/FAILED |
+| Direct publish | `triggerPublishWorkflow` in `apps/server/src/lib/posts.ts` — calls Meta Graph API in-process |
 | Test UI | `/dashboard/posts` — upload, platforms, publish, status badges |
 | FB verify script | `pnpm --filter server test:fb-publish` |
 
-### Publish webhook payload (to n8n)
-
-```json
-{
-  "postId": "uuid",
-  "mediaUrl": "https://...",
-  "caption": "...",
-  "platforms": ["facebook", "instagram"],
-  "businessId": "<FB_PAGE_ID from server env>",
-  "callbackUrl": "<APP_PUBLIC_URL>/webhooks/n8n-callback"
-}
-```
-
-- `platforms` sent **lowercase** for n8n IF conditions
-- `platformResults` optional on callback
-
-## n8n workflow (configuration)
-
-Documented in **[n8n-workflow.md](./n8n-workflow.md)**.
-
-| Node | Purpose |
-|------|---------|
-| Webhook | Receives publish payload at `polyedro-publish-loop` |
-| IF | `platforms.includes('facebook')` |
-| HTTP Request | Meta `POST /v19.0/{FB_PAGE_ID}/photos` (form: url, caption, access_token) |
-| HTTP Request | Success → callback `PUBLISHED` + `platformResults.facebook` |
-| HTTP Request | Error / false branch → callback `FAILED` or mock `PUBLISHED` |
-
-n8n Variables (not in git; reference in workflows as `$vars.KEY`): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL`.
+See **[direct-publish.md](./direct-publish.md)** for the full request flow
+and env vars — there is no webhook payload or callback anymore, the
+Graph API call and `finalizePost` happen in the same process.
 
 ## Meta / Facebook
 
@@ -63,46 +38,41 @@ n8n Variables (not in git; reference in workflows as `$vars.KEY`): `FB_PAGE_ID`,
 | Page | **Polyedro Test Page** |
 | Permissions (dev) | `pages_show_list`, `pages_read_engagement`, `pages_manage_posts` — ready for testing |
 | Verified endpoint | `POST /v19.0/{page-id}/photos` with Page token from **`GET /me/accounts`** |
-| Instagram | **Skipped** — `instagram_business_content_publish` needs App Review; mocked in n8n false branch |
+| Instagram | **Skipped** — `instagram_business_content_publish` needs App Review; mocked |
 
 ### Lessons from FB testing
 
 - Error **190** → corrupted / wrong token (User token vs Page token)
 - Error **200 timelines** → User token or wrong Page ID
 - **Working pair:** `id` + `access_token` from the **same** `/me/accounts` row
-- **`mediaUrl` must be public HTTPS** — Meta cannot fetch `localhost` uploads without ngrok
+- **`mediaUrl` must be public HTTPS** — Meta cannot fetch `localhost` uploads
 
 ## Infrastructure / dev tooling
 
 | Topic | Detail |
 |-------|--------|
 | **Node/pnpm** | nvm `~/.config/nvm`, symlinks in `~/.local/bin` |
-| **Cloudflare tunnel** | Named tunnel `polyedro-dev` — **blocked** on outbound port **7844** on this network |
-| **ngrok** | Works on **443** — use for `APP_PUBLIC_URL` and n8n callbacks |
-| **Secrets** | Only in `apps/server/.env`, `apps/web/.env.local`, n8n Variables panel — **never committed** |
+| **Secrets** | Only in `apps/server/.env`, `apps/web/.env.local` — **never committed** |
 
 ## Docs map
 
 | Doc | Topic |
 |-----|--------|
 | [baseline-summary.md](./baseline-summary.md) | Pre-feature repo state |
-| [n8n-workflow.md](./n8n-workflow.md) | n8n node-by-node setup |
-| [ngrok-tunnel.md](./ngrok-tunnel.md) | ngrok for callbacks |
-| [cloudflare-tunnel.md](./cloudflare-tunnel.md) | Cloudflare (7844 troubleshooting) |
+| [direct-publish.md](./direct-publish.md) | Direct Meta publish architecture (this branch) |
 | [database.md](./database.md) | Supabase/Postgres (production path) |
 
 ## E2E test (current)
 
-1. `ngrok http 3000` → set `APP_PUBLIC_URL` (server `.env` + n8n Variables)
-2. `pnpm --filter server dev` + `pnpm --filter web dev`
-3. `/dashboard/posts` — Facebook checked, public image URL (e.g. picsum)
-4. **Publish Now** → `DRAFT` → `PUBLISHING` → `PUBLISHED`
-5. Photo on Polyedro Test Page feed
+1. `pnpm --filter server dev` + `pnpm --filter web dev`
+2. `/dashboard/posts` — Facebook checked, public image URL (e.g. picsum)
+3. **Publish Now** → `DRAFT` → `PUBLISHING` → `PUBLISHED`
+4. Photo on Polyedro Test Page feed
 
 ## Not done yet
 
 - Instagram real publish (App Review)
 - Cloudinary / production media storage
-- Long-lived Page token refresh in n8n
+- Long-lived Page token refresh
 - Production Postgres deploy
-- Static ngrok domain or hosted API URL
+- Hosted API URL (production deploy target)

@@ -40,13 +40,6 @@ export const updatePostSchema = z.object({
   scheduledAt: z.iso.datetime().nullable().optional(),
 });
 
-export const n8nCallbackSchema = z.object({
-  postId: z.uuid(),
-  status: z.enum([PostStatus.PUBLISHED, PostStatus.FAILED]),
-  errorMessage: z.string().optional(),
-  platformResults: z.record(z.string(), z.string()).optional(),
-});
-
 export type Post = {
   id: string;
   mediaUrl: string;
@@ -62,4 +55,3 @@ export type Post = {
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
-export type N8nCallbackInput = z.infer<typeof n8nCallbackSchema>;
