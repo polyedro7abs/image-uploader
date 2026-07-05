@@ -53,18 +53,23 @@ Same call `pnpm --filter server test:fb-publish` exercises
 (`apps/server/src/scripts/test-fb-publish.ts`) — kept as a standalone
 smoke test independent of the publish loop.
 
-## `mediaUrl` still needs to be public
+## Local uploads work without a public URL
 
-Meta's servers fetch the image URL directly, so
-`http://localhost:3000/uploads/...` will fail regardless of n8n. Use a
-public HTTPS URL (e.g. `https://picsum.photos/800/600`) for local testing,
-or expose `apps/server`'s `/uploads` path publicly if you need to test
-real uploads end to end.
+Meta's servers can't fetch `http://localhost:3000/uploads/...` — that was
+the old n8n limitation too. Since publishing now runs in the same process
+as the upload route, `publishToFacebook` (`apps/server/src/lib/posts.ts`)
+detects a `mediaUrl` pointing at our own `/uploads/<file>`, reads the file
+straight off disk, and sends it to the Graph API as a binary `source` part
+instead of asking Facebook to fetch a `url`. No ngrok/Cloudflare tunnel
+needed for local testing.
+
+Any other `mediaUrl` (e.g. `https://picsum.photos/800/600`, a CDN URL) is
+still passed as `url` and fetched by Facebook directly.
 
 ## E2E test checklist
 
 1. `pnpm --filter server dev` + `pnpm --filter web dev`
-2. Create a post at `/dashboard/posts` with **Facebook** checked and a
-   public `mediaUrl`
+2. Create a post at `/dashboard/posts` — upload a real image file (or
+   paste a public `mediaUrl`) with **Facebook** checked
 3. **Publish Now** → UI shows `DRAFT` → `PUBLISHING` → `PUBLISHED`
 4. Photo appears on the Facebook Page

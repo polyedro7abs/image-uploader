@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { env } from "@Polyedro-abs/env/server";
 import { PostStatus, SocialPlatform, type Post } from "@Polyedro-abs/types";
 import { eq } from "drizzle-orm";
@@ -6,6 +8,25 @@ import { db } from "@/db";
 import { posts } from "@/db/schema";
 
 type DbPost = typeof posts.$inferSelect;
+
+const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
+
+async function localUploadPath(mediaUrl: string): Promise<string | null> {
+  try {
+    const { pathname } = new URL(mediaUrl);
+    const prefix = "/uploads/";
+    if (!pathname.startsWith(prefix)) return null;
+
+    const filename = pathname.slice(prefix.length);
+    if (!filename || filename.includes("/")) return null;
+
+    const filepath = join(UPLOAD_DIR, filename);
+    await stat(filepath);
+    return filepath;
+  } catch {
+    return null;
+  }
+}
 
 function parsePlatforms(raw: string): SocialPlatform[] {
   return JSON.parse(raw) as SocialPlatform[];
@@ -60,6 +81,19 @@ export async function finalizePost(
 
 const GRAPH_VERSION = "v19.0";
 
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+};
+
+function imageMimeType(filepath: string): string {
+  const ext = filepath.split(".").pop()?.toLowerCase() ?? "";
+  return IMAGE_MIME_TYPES[ext] ?? "application/octet-stream";
+}
+
 async function publishToFacebook(post: DbPost): Promise<string> {
   if (!env.FB_PAGE_ID || !env.FB_PAGE_ACCESS_TOKEN) {
     throw new Error("FB_PAGE_ID or FB_PAGE_ACCESS_TOKEN is not configured");
@@ -67,7 +101,16 @@ async function publishToFacebook(post: DbPost): Promise<string> {
 
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${env.FB_PAGE_ID}/photos`;
   const body = new FormData();
-  body.append("url", post.mediaUrl);
+
+  const localPath = await localUploadPath(post.mediaUrl);
+  if (localPath) {
+    const buffer = await readFile(localPath);
+    const blob = new Blob([buffer], { type: imageMimeType(localPath) });
+    body.append("source", blob, localPath.split("/").pop());
+  } else {
+    body.append("url", post.mediaUrl);
+  }
+
   body.append("caption", post.caption);
   body.append("access_token", env.FB_PAGE_ACCESS_TOKEN);
 
