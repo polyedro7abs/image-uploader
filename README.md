@@ -2,7 +2,7 @@
 
 Social post automation monorepo — [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (Next.js, Hono, Turborepo, shared shadcn UI).
 
-**Branch `direct-fb-publish`:** publish loop — UI → API → Facebook Page (direct Meta Graph API call, no n8n) → live status.
+**Branch `direct-fb-publish`:** publish loop — UI → API → Facebook Page (direct Meta Graph API call, no n8n) → live status. Includes **scheduled publishing** (cron) and a **calendar UI** to schedule, view, and reschedule posts.
 
 ## Quick start
 
@@ -16,7 +16,8 @@ pnpm dev
 
 - Web: [http://localhost:3001](http://localhost:3001)
 - API: [http://localhost:3000](http://localhost:3000)
-- Test UI: [http://localhost:3001/dashboard/posts](http://localhost:3001/dashboard/posts)
+- Posts UI: [http://localhost:3001/dashboard/posts](http://localhost:3001/dashboard/posts)
+- Calendar: [http://localhost:3001/dashboard/calendar](http://localhost:3001/dashboard/calendar)
 
 ## Documentation
 
@@ -24,7 +25,8 @@ pnpm dev
 |-----|-------------|
 | [docs/baseline-summary.md](./docs/baseline-summary.md) | Repo state **before** the publish loop |
 | [docs/publish-loop-improvements.md](./docs/publish-loop-improvements.md) | Publish loop history, Meta API, E2E |
-| [docs/direct-publish.md](./docs/direct-publish.md) | **Latest** — direct Meta publish (no n8n), env vars |
+| [docs/direct-publish.md](./docs/direct-publish.md) | Direct Meta publish (no n8n), env vars |
+| [docs/scheduled-publishing.md](./docs/scheduled-publishing.md) | **Latest** — cron scheduler, calendar UI, schedule API |
 | [docs/database.md](./docs/database.md) | Postgres/Supabase (production path) |
 
 > **AI / full local context** (secrets by location, not in git):  
@@ -35,8 +37,8 @@ pnpm dev
 ```
 Polyedro-ads/
 ├── apps/
-│   ├── web/              Next.js :3001, dashboard/posts
-│   └── server/           Hono :3000, posts API, direct Meta Graph API publish
+│   ├── web/              Next.js :3001, dashboard/posts + calendar
+│   └── server/           Hono :3000, posts API, cron scheduler, Meta publish
 ├── packages/
 │   ├── types/            @Polyedro-abs/types (Post, Zod)
 │   ├── ui/               @Polyedro-abs/ui (shadcn)
@@ -50,6 +52,8 @@ Polyedro-ads/
 
 - **TypeScript** — shared types across web and server
 - **Publish loop** — upload media, create post, publish directly to Meta, poll status
+- **Scheduled publishing** — future `scheduledAt` on create; cron fires `triggerPublishWorkflow` every 60s
+- **Calendar UI** — month view, schedule new posts, reschedule/unschedule existing ones
 - **Facebook Page publish** — verified via `pnpm --filter server test:fb-publish`
 - **Instagram** — mocked until Meta App Review
 

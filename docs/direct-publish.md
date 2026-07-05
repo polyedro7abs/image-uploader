@@ -73,3 +73,14 @@ still passed as `url` and fetched by Facebook directly.
    paste a public `mediaUrl`) with **Facebook** checked
 3. **Publish Now** → UI shows `DRAFT` → `PUBLISHING` → `PUBLISHED`
 4. Photo appears on the Facebook Page
+
+## Scheduled publishing
+
+Posts can be scheduled at create time (`POST /posts` with future
+`scheduledAt`) or from the calendar UI (`/dashboard/calendar`). A
+node-cron job in `apps/server/src/jobs/scheduler.ts` runs every 60s,
+atomically claims due `SCHEDULED` posts, and calls the same
+`triggerPublishWorkflow` used by **Publish Now**.
+
+See **[scheduled-publishing.md](./scheduled-publishing.md)** for API
+details, calendar UX, and cron smoke-test commands.

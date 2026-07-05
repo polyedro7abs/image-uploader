@@ -24,7 +24,10 @@ UI (Next.js :3001)
 | Posts API | `POST/GET/PATCH /posts`, `POST /posts/:id/publish` |
 | Media upload | `POST /media/upload` → `public/uploads/` |
 | Direct publish | `triggerPublishWorkflow` in `apps/server/src/lib/posts.ts` — calls Meta Graph API in-process |
-| Test UI | `/dashboard/posts` — upload, platforms, publish, status badges |
+| Scheduled publish | `apps/server/src/jobs/scheduler.ts` — node-cron every 60s, same `triggerPublishWorkflow` |
+| Schedule API | `PATCH /posts/:id/schedule`, future `scheduledAt` on `POST /posts` |
+| Test UI | `/dashboard/posts` — upload, platforms, publish now, status badges |
+| Calendar UI | `/dashboard/calendar` — month view, schedule/reschedule/unschedule |
 | FB verify script | `pnpm --filter server test:fb-publish` |
 
 See **[direct-publish.md](./direct-publish.md)** for the full request flow
@@ -60,6 +63,7 @@ Graph API call and `finalizePost` happen in the same process.
 |-----|--------|
 | [baseline-summary.md](./baseline-summary.md) | Pre-feature repo state |
 | [direct-publish.md](./direct-publish.md) | Direct Meta publish architecture (this branch) |
+| [scheduled-publishing.md](./scheduled-publishing.md) | Cron scheduler + calendar UI |
 | [database.md](./database.md) | Supabase/Postgres (production path) |
 
 ## E2E test (current)
@@ -76,3 +80,5 @@ Graph API call and `finalizePost` happen in the same process.
 - Long-lived Page token refresh
 - Production Postgres deploy
 - Hosted API URL (production deploy target)
+- `GET /posts` filtering (calendar fetches all client-side)
+- Automated scheduler tests

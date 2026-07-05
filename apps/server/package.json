@@ -18,10 +18,11 @@
     "@Polyedro-abs/env": "workspace:*",
     "@Polyedro-abs/types": "workspace:*",
     "@hono/node-server": "^1.14.4",
-    "dotenv": "catalog:",
     "better-sqlite3": "^11.10.0",
+    "dotenv": "catalog:",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.8.2",
+    "node-cron": "^4.5.0",
     "zod": "catalog:"
   },
   "devDependencies": {

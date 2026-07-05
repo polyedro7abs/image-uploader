@@ -29,6 +29,7 @@ import { Textarea } from "@Polyedro-abs/ui/components/textarea";
 import { env } from "@Polyedro-abs/env/web";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { statusBadgeClass } from "@/lib/post-status";
 
 const SERVER_URL = env.NEXT_PUBLIC_SERVER_URL;
 
@@ -56,23 +57,6 @@ function platformViewUrl(platform: string, externalId: string): string | null {
       return `https://www.linkedin.com/feed/update/${externalId}`;
     default:
       return null;
-  }
-}
-
-function statusBadgeClass(status: Post["status"]): string {
-  switch (status) {
-    case PostStatus.DRAFT:
-      return "bg-muted text-muted-foreground";
-    case PostStatus.SCHEDULED:
-      return "bg-muted text-muted-foreground";
-    case PostStatus.PUBLISHING:
-      return "bg-blue-500 text-white dark:bg-blue-600";
-    case PostStatus.PUBLISHED:
-      return "bg-green-500 text-white dark:bg-green-600";
-    case PostStatus.FAILED:
-      return "bg-destructive text-white";
-    default:
-      return "";
   }
 }
 

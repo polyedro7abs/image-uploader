@@ -26,18 +26,32 @@ const platformSchema = z.enum([
   SocialPlatform.LINKEDIN,
 ]);
 
+const optionalScheduledAtSchema = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.iso.datetime().optional(),
+);
+
+const nullableScheduledAtSchema = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.iso.datetime().nullable().optional(),
+);
+
 export const createPostSchema = z.object({
   mediaUrl: z.url(),
   caption: z.string().min(1),
   platforms: z.array(platformSchema).min(1),
-  scheduledAt: z.iso.datetime().optional(),
+  scheduledAt: optionalScheduledAtSchema,
 });
 
 export const updatePostSchema = z.object({
   mediaUrl: z.url().optional(),
   caption: z.string().min(1).optional(),
   platforms: z.array(platformSchema).min(1).optional(),
-  scheduledAt: z.iso.datetime().nullable().optional(),
+  scheduledAt: nullableScheduledAtSchema,
+});
+
+export const schedulePostSchema = z.object({
+  scheduledAt: nullableScheduledAtSchema,
 });
 
 export type Post = {
@@ -46,7 +60,7 @@ export type Post = {
   caption: string;
   platforms: SocialPlatform[];
   status: PostStatus;
-  scheduledAt: string | null;
+  scheduledAt?: string | null;
   errorMessage: string | null;
   platformResults: Record<string, string> | null;
   createdAt: string;

@@ -1,7 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { createPostSchema, PostStatus, updatePostSchema } from "@Polyedro-abs/types";
+import {
+  createPostSchema,
+  PostStatus,
+  schedulePostSchema,
+  updatePostSchema,
+} from "@Polyedro-abs/types";
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "@/db";
@@ -35,6 +40,14 @@ mediaRoutes.post("/upload", async (c) => {
 
 export const postsRoutes = new Hono();
 
+function scheduledDateFrom(value: string | null | undefined): Date | null {
+  return value ? new Date(value) : null;
+}
+
+function isFutureDate(date: Date | null): date is Date {
+  return date !== null && date.getTime() > Date.now();
+}
+
 postsRoutes.post("/", async (c) => {
   const parsed = createPostSchema.safeParse(await c.req.json());
   if (!parsed.success) {
@@ -42,7 +55,8 @@ postsRoutes.post("/", async (c) => {
   }
 
   const { mediaUrl, caption, platforms, scheduledAt } = parsed.data;
-  const status = scheduledAt ? PostStatus.SCHEDULED : PostStatus.DRAFT;
+  const scheduledDate = scheduledDateFrom(scheduledAt);
+  const isScheduled = isFutureDate(scheduledDate);
 
   const [created] = await db
     .insert(posts)
@@ -50,8 +64,8 @@ postsRoutes.post("/", async (c) => {
       mediaUrl,
       caption,
       platforms: serializePlatforms(platforms),
-      status,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      status: isScheduled ? PostStatus.SCHEDULED : PostStatus.DRAFT,
+      scheduledAt: isScheduled ? scheduledDate : null,
     })
     .returning();
 
@@ -61,6 +75,49 @@ postsRoutes.post("/", async (c) => {
 postsRoutes.get("/", async (c) => {
   const rows = await db.select().from(posts).orderBy(desc(posts.createdAt));
   return c.json(rows.map(toPost));
+});
+
+postsRoutes.patch("/:id/schedule", async (c) => {
+  const id = c.req.param("id");
+  const parsed = schedulePostSchema.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const [existing] = await db.select().from(posts).where(eq(posts.id, id));
+  if (!existing) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  if (
+    existing.status === PostStatus.PUBLISHING ||
+    existing.status === PostStatus.PUBLISHED ||
+    existing.status === PostStatus.FAILED
+  ) {
+    return c.json({ error: `Cannot reschedule a post with status ${existing.status}` }, 400);
+  }
+
+  const { scheduledAt } = parsed.data;
+  if (scheduledAt === undefined) {
+    return c.json({ error: "scheduledAt is required; pass an ISO date string or null" }, 400);
+  }
+
+  const nextScheduledAt = scheduledDateFrom(scheduledAt);
+  if (scheduledAt !== null && !isFutureDate(nextScheduledAt)) {
+    return c.json({ error: "scheduledAt must be a future ISO date string" }, 400);
+  }
+
+  const [updated] = await db
+    .update(posts)
+    .set({
+      scheduledAt: nextScheduledAt,
+      status: nextScheduledAt ? PostStatus.SCHEDULED : PostStatus.DRAFT,
+      updatedAt: new Date(),
+    })
+    .where(eq(posts.id, id))
+    .returning();
+
+  return c.json(toPost(updated!));
 });
 
 postsRoutes.patch("/:id", async (c) => {
@@ -89,7 +146,7 @@ postsRoutes.patch("/:id", async (c) => {
 
   const nextStatus =
     scheduledAt !== undefined
-      ? nextScheduledAt
+      ? isFutureDate(nextScheduledAt)
         ? PostStatus.SCHEDULED
         : PostStatus.DRAFT
       : existing.status;
@@ -100,7 +157,7 @@ postsRoutes.patch("/:id", async (c) => {
       ...(mediaUrl !== undefined && { mediaUrl }),
       ...(caption !== undefined && { caption }),
       ...(platforms !== undefined && { platforms: serializePlatforms(platforms) }),
-      scheduledAt: nextScheduledAt,
+      scheduledAt: nextStatus === PostStatus.SCHEDULED ? nextScheduledAt : null,
       status: nextStatus,
       updatedAt: new Date(),
     })

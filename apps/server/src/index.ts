@@ -1,6 +1,7 @@
 import { env } from "@Polyedro-abs/env/server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { db } from "@/db";
+import { startScheduledPublishJob } from "@/jobs/scheduler";
 import { mediaRoutes, postsRoutes } from "@/routes/posts";
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -33,6 +34,8 @@ app.route("/media", mediaRoutes);
 app.route("/posts", postsRoutes);
 
 import { serve } from "@hono/node-server";
+
+startScheduledPublishJob();
 
 serve(
   {
