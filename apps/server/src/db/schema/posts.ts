@@ -10,6 +10,7 @@ export const posts = sqliteTable("posts", {
   status: text("status").notNull().default("DRAFT"),
   scheduledAt: integer("scheduled_at", { mode: "timestamp_ms" }),
   errorMessage: text("error_message"),
+  platformResults: text("platform_results"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),

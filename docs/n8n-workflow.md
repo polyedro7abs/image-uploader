@@ -2,13 +2,15 @@
 
 Wire the existing webhook to Facebook Graph API and callback to the Polyedro API.
 
-**Webhook URL:** `https://your-instance.app.n8n.cloud/webhook/your-path` (from your n8n Webhook node)
+**Webhook URL:** `https://bramar.app.n8n.cloud/webhook/polyedro-publish-loop`
+
+> **Webhook path:** `polyedro-publish-loop` (not `polyedro-publish`). Another workflow in the same n8n Cloud instance already uses `polyedro-publish`, so this path was renamed to avoid a conflict. Do not change it back to `polyedro-publish`.
 
 ## Prerequisites
 
-### n8n environment variables
+### n8n Variables
 
-In n8n Cloud → **Settings → Environments** (or project variables):
+In n8n Cloud → **Variables** panel (not server `.env`):
 
 | Variable | Example | Used for |
 |----------|---------|----------|
@@ -16,12 +18,14 @@ In n8n Cloud → **Settings → Environments** (or project variables):
 | `FB_PAGE_ACCESS_TOKEN` | *(Page token from `/me/accounts`)* | Facebook `access_token` field |
 | `APP_PUBLIC_URL` | `https://xxxx.ngrok-free.dev` | Callback base URL (update each ngrok session) |
 
-Never hardcode tokens in nodes — use `{{ $env.FB_PAGE_ACCESS_TOKEN }}`.
+Never hardcode tokens in nodes — use `{{ $vars.FB_PAGE_ACCESS_TOKEN }}`.
+
+> **Expression syntax:** n8n Cloud Variables use `$vars.KEY` in expressions, not `$env.KEY` — confirmed via the Variables panel's **Usage Syntax** column. This differs from self-hosted n8n's `process.env`-style access in Code nodes.
 
 ### App `.env` (server)
 
 ```env
-N8N_WEBHOOK_URL=
+N8N_WEBHOOK_URL=https://bramar.app.n8n.cloud/webhook/polyedro-publish-loop
 APP_PUBLIC_URL=https://your-ngrok-url.ngrok-free.dev
 FB_PAGE_ID=
 ```
@@ -31,7 +35,7 @@ Run locally:
 ```bash
 pnpm --filter server dev    # :3000
 pnpm --filter web dev       # :3001
-ngrok http 3000             # copy HTTPS URL → APP_PUBLIC_URL + n8n env
+ngrok http 3000             # copy HTTPS URL → APP_PUBLIC_URL + n8n Variables
 ```
 
 ### Important: public `mediaUrl`
@@ -62,7 +66,7 @@ Flat JSON (not nested under `body`):
 
 - `platforms` — lowercase slugs (`facebook`, `instagram`, `tiktok`, `linkedin`)
 - `businessId` — Facebook Page ID from server `FB_PAGE_ID` (optional, null if unset)
-- `callbackUrl` — use this in callback nodes, or build from `$env.APP_PUBLIC_URL`
+- `callbackUrl` — use this in callback nodes, or build from `$vars.APP_PUBLIC_URL`
 
 ---
 
@@ -82,7 +86,7 @@ Webhook
 ## Node 1 — Webhook (existing)
 
 - **Method:** POST
-- **Path:** `polyedro-publish`
+- **Path:** `polyedro-publish-loop` (see note at top — not `polyedro-publish`)
 - **Response:** Respond immediately (workflow continues async) or use **Respond to Webhook** at the end — for this flow, default “on received” is fine
 
 ---
@@ -103,7 +107,7 @@ Webhook
 - **Method:** POST
 - **URL:**
   ```text
-  https://graph.facebook.com/v19.0/{{ $env.FB_PAGE_ID }}/photos
+  https://graph.facebook.com/v19.0/{{ $vars.FB_PAGE_ID }}/photos
   ```
 - **Authentication:** None (token in body)
 - **Send Body:** ON
@@ -114,7 +118,7 @@ Webhook
   |------|--------|
   | `url` | `{{ $json.mediaUrl }}` |
   | `caption` | `{{ $json.caption }}` |
-  | `access_token` | `{{ $env.FB_PAGE_ACCESS_TOKEN }}` |
+  | `access_token` | `{{ $vars.FB_PAGE_ACCESS_TOKEN }}` |
 
 - **Options → Response:** Full response
 - **On Error:** Continue using **Error Output** (enable in node settings) — route error output to callback FAILED node
@@ -136,7 +140,7 @@ Webhook
   ```
   Or fixed:
   ```text
-  {{ $env.APP_PUBLIC_URL }}/webhooks/n8n-callback
+  {{ $vars.APP_PUBLIC_URL }}/webhooks/n8n-callback
   ```
 - **Body Content Type:** JSON
 - **Body:**
@@ -234,7 +238,7 @@ Post must be in `PUBLISHING` status.
 
 ## E2E test checklist
 
-1. ngrok running → `APP_PUBLIC_URL` set in server `.env` and n8n env
+1. ngrok running → `APP_PUBLIC_URL` set in server `.env` and n8n Variables
 2. n8n workflow **active**
 3. Create post at `http://localhost:3001/dashboard/posts`
    - Caption: anything

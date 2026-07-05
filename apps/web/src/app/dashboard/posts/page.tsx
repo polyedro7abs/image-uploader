@@ -34,6 +34,31 @@ const SERVER_URL = env.NEXT_PUBLIC_SERVER_URL;
 
 const PLATFORMS = Object.values(SocialPlatform) as SocialPlatformType[];
 
+const PLATFORM_VIEW_LABELS: Record<string, string> = {
+  facebook: "View on Facebook",
+  instagram: "View on Instagram",
+  tiktok: "View on TikTok",
+  linkedin: "View on LinkedIn",
+};
+
+function platformViewUrl(platform: string, externalId: string): string | null {
+  if (externalId.startsWith("mock:")) return null;
+
+  const normalized = platform.toLowerCase();
+  switch (normalized) {
+    case "facebook":
+      return `https://www.facebook.com/${externalId}`;
+    case "instagram":
+      return `https://www.instagram.com/p/${externalId}`;
+    case "tiktok":
+      return `https://www.tiktok.com/@/video/${externalId}`;
+    case "linkedin":
+      return `https://www.linkedin.com/feed/update/${externalId}`;
+    default:
+      return null;
+  }
+}
+
 function statusBadgeClass(status: Post["status"]): string {
   switch (status) {
     case PostStatus.DRAFT:
@@ -257,12 +282,42 @@ export default function PostsPage() {
                   <TableRow key={post.id}>
                     <TableCell className="max-w-[200px] truncate">{post.caption}</TableCell>
                     <TableCell>{post.platforms.join(", ")}</TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[12rem] max-w-md align-top select-text">
                       <Badge className={statusBadgeClass(post.status)}>{post.status}</Badge>
                       {post.errorMessage && (
-                        <p className="mt-1 max-w-[160px] truncate text-xs text-destructive">
+                        <p className="mt-1 break-words text-xs text-destructive">
                           {post.errorMessage}
                         </p>
+                      )}
+                      {post.status === PostStatus.PUBLISHED && post.platformResults && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {Object.entries(post.platformResults).map(([platform, externalId]) => {
+                            const url = platformViewUrl(platform, externalId);
+                            const label =
+                              PLATFORM_VIEW_LABELS[platform.toLowerCase()] ??
+                              `View on ${platform}`;
+
+                            if (url) {
+                              return (
+                                <a
+                                  key={platform}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium text-primary hover:underline"
+                                >
+                                  {label}
+                                </a>
+                              );
+                            }
+
+                            return (
+                              <Badge key={platform} variant="outline" className="text-xs">
+                                {platform}: {externalId}
+                              </Badge>
+                            );
+                          })}
+                        </div>
                       )}
                     </TableCell>
                     <TableCell>{new Date(post.createdAt).toLocaleString()}</TableCell>

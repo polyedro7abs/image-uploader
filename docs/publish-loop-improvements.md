@@ -48,13 +48,13 @@ Documented in **[n8n-workflow.md](./n8n-workflow.md)**.
 
 | Node | Purpose |
 |------|---------|
-| Webhook | Receives publish payload |
+| Webhook | Receives publish payload at `polyedro-publish-loop` |
 | IF | `platforms.includes('facebook')` |
 | HTTP Request | Meta `POST /v19.0/{FB_PAGE_ID}/photos` (form: url, caption, access_token) |
 | HTTP Request | Success → callback `PUBLISHED` + `platformResults.facebook` |
 | HTTP Request | Error / false branch → callback `FAILED` or mock `PUBLISHED` |
 
-n8n env vars (not in git): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL`.
+n8n Variables (not in git; reference in workflows as `$vars.KEY`): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL`.
 
 ## Meta / Facebook
 
@@ -79,7 +79,7 @@ n8n env vars (not in git): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL
 | **Node/pnpm** | nvm `~/.config/nvm`, symlinks in `~/.local/bin` |
 | **Cloudflare tunnel** | Named tunnel `polyedro-dev` — **blocked** on outbound port **7844** on this network |
 | **ngrok** | Works on **443** — use for `APP_PUBLIC_URL` and n8n callbacks |
-| **Secrets** | Only in `apps/server/.env`, `apps/web/.env.local`, n8n Cloud env — **never committed** |
+| **Secrets** | Only in `apps/server/.env`, `apps/web/.env.local`, n8n Variables panel — **never committed** |
 
 ## Docs map
 
@@ -93,7 +93,7 @@ n8n env vars (not in git): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL
 
 ## E2E test (current)
 
-1. `ngrok http 3000` → set `APP_PUBLIC_URL` (server + n8n)
+1. `ngrok http 3000` → set `APP_PUBLIC_URL` (server `.env` + n8n Variables)
 2. `pnpm --filter server dev` + `pnpm --filter web dev`
 3. `/dashboard/posts` — Facebook checked, public image URL (e.g. picsum)
 4. **Publish Now** → `DRAFT` → `PUBLISHING` → `PUBLISHED`

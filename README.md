@@ -80,13 +80,13 @@ cp apps/web/.env.example apps/web/.env.local
 |----------|-----|-------------|
 | `DATABASE_URL` | server | Local: `file:./dev.db`. Prod: `postgresql://...` |
 | `CORS_ORIGIN` | server | e.g. `http://localhost:3001` |
-| `N8N_WEBHOOK_URL` | server | n8n webhook URL (empty = mock mode) |
+| `N8N_WEBHOOK_URL` | server | n8n webhook URL (`…/webhook/polyedro-publish-loop`; empty = mock mode) |
 | `APP_PUBLIC_URL` | server | Public HTTPS URL for n8n callbacks (ngrok) |
 | `FB_PAGE_ID` | server | Facebook Page ID (webhook `businessId` + FB test script) |
 | `FB_PAGE_ACCESS_TOKEN` | server | Page token for `test:fb-publish` only |
 | `NEXT_PUBLIC_SERVER_URL` | web | e.g. `http://localhost:3000` |
 
-Also set in **n8n Cloud env:** `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL`.
+Also set in **n8n Cloud Variables** panel (referenced in workflows as `$vars.KEY`): `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`, `APP_PUBLIC_URL`.
 
 ## UI customization
 

@@ -132,6 +132,7 @@ postsRoutes.post("/:id/publish", async (c) => {
     .set({
       status: PostStatus.PUBLISHING,
       errorMessage: null,
+      platformResults: null,
       updatedAt: new Date(),
     })
     .where(eq(posts.id, id))
@@ -161,6 +162,6 @@ webhookRoutes.post("/n8n-callback", async (c) => {
     return c.json({ error: "Post is not in publishing state" }, 400);
   }
 
-  const updated = await finalizePost(postId, status, errorMessage);
-  return c.json(updated ? { ...updated, platformResults: platformResults ?? null } : { ok: true });
+  const updated = await finalizePost(postId, status, errorMessage, platformResults);
+  return c.json(updated ?? { ok: true });
 });

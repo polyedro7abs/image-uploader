@@ -44,7 +44,7 @@ export const n8nCallbackSchema = z.object({
   postId: z.uuid(),
   status: z.enum([PostStatus.PUBLISHED, PostStatus.FAILED]),
   errorMessage: z.string().optional(),
-  platformResults: z.record(z.string(), z.unknown()).optional(),
+  platformResults: z.record(z.string(), z.string()).optional(),
 });
 
 export type Post = {
@@ -55,6 +55,7 @@ export type Post = {
   status: PostStatus;
   scheduledAt: string | null;
   errorMessage: string | null;
+  platformResults: Record<string, string> | null;
   createdAt: string;
   updatedAt: string;
 };

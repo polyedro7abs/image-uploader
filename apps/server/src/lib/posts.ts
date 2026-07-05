@@ -14,6 +14,11 @@ function parsePlatforms(raw: string): SocialPlatform[] {
   return JSON.parse(raw) as SocialPlatform[];
 }
 
+function parsePlatformResults(raw: string | null): Record<string, string> | null {
+  if (!raw) return null;
+  return JSON.parse(raw) as Record<string, string>;
+}
+
 export function toPost(row: DbPost): Post {
   return {
     id: row.id,
@@ -23,6 +28,7 @@ export function toPost(row: DbPost): Post {
     status: row.status as PostStatus,
     scheduledAt: row.scheduledAt?.toISOString() ?? null,
     errorMessage: row.errorMessage,
+    platformResults: parsePlatformResults(row.platformResults),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -36,12 +42,17 @@ export async function finalizePost(
   postId: string,
   status: typeof PostStatus.PUBLISHED | typeof PostStatus.FAILED,
   errorMessage?: string,
+  platformResults?: Record<string, string>,
 ): Promise<Post | null> {
   const [updated] = await db
     .update(posts)
     .set({
       status,
       errorMessage: status === PostStatus.FAILED ? (errorMessage ?? "Publish failed") : null,
+      platformResults:
+        status === PostStatus.PUBLISHED && platformResults
+          ? JSON.stringify(platformResults)
+          : null,
       updatedAt: new Date(),
     })
     .where(eq(posts.id, postId))
